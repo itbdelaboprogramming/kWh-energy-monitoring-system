@@ -35,6 +35,7 @@ while True:
         # count refers to how many sample the address
         # unit means the slave (each of device has unique slave)
         # print("Voltage 1 :{}, Voltage 2: {}, Voltage 3: {},Current 1 : {}, Current 2: {}, Current 3 : {},  Power Factor : {}, Frequency : {}, Active Power : {}, Passive Power : {}".format(ct1[01]/100))
+        # In this case Omron Power Meter has 4 CT (Current Transformer)
         
         #counter
         timer = datetime.datetime.now()
