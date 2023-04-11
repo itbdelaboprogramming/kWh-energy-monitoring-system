@@ -110,7 +110,7 @@ while True:
             ct1.send_command(client=client, command="change_GeneratedEnergyKWh", param=0)
             ct1.send_command(client=client, command="change_TotalReactiveEnergyKVArh", param=0)
             ct1.shift_to_measurement(client=client)
-            time.sleep(5)
+            #time.sleep(5)
             ct2.shift_to_setting(client=client)
             ct2.send_command(client=client, command="change_ConsumedEnergyWh", param=0)
             ct2.send_command(client=client, command="change_GeneratedEnergyWh", param=0)
