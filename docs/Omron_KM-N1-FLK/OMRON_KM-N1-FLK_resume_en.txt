@@ -1,0 +1,199 @@
+OMRON KM-N1-FLK 
+[RS485]
+- = B
++ = A
+
+
+[P3-5]
+Measured value list / description
+
+
+[P3-9]
+communication protocol = Modbus
+data length = 8 bits
+stop bit = 2 bit
+baud rate = 38400bps
+parity bit = none
+Transmission waiting time = 0ms
+
+
+[P5-16]
+-Transmission code = binary
+
+DATA FORMAT
+Command Frame:
+| Unit_No | Funct_Code |        Data         | CRC-16  |
+| (1 byte)|  (1 byte)  |(func_code dependant)|(2 bytes)|
+
+-Unit_No set in Hex 01-->0x01
+-Unit_No = server/slave unit address (to whom the command is send)
+
+Response Frame:
+| Unit_No | Funct_Code |        Data       | CRC-16  |
+| (1 byte)|  (1 byte)  |(command dependant)|(2 bytes)|
+-Response's Funct_Code = Command's Funct_Code
+-Unit_No = server/slave unit address (from where the response is sent)
+
+
+[P5-17]
+Anomaly Response Frame:
+| Unit_No | Funct_Code | Err_Code | CRC-16  |
+| (1 byte)|  (1 byte)  | (1 byte) |(2 bytes)|
+-Funct_Code = base Funct_Code + 0x80 (ex: 0x03+0x80=0x83)
+-Unit_No = server/slave unit address (from where the response is sent)
+-CRC-16 calc. example
+
+[P5-18]
+
+Funct_Code:
+03 (0x03) = read registers
+16 (0x10) = write registers
+06 (0x06) = write 1 bit (use command_code)
+08 (0x08) = echo test
+
+Err_Code:
+0x01 = unrecognized Funct_Code (1st)
+0x02 = incorrect variable address (2nd)
+0x03 = incorrect data, data value out of range, mismatch Data_Amount (3rd)
+0x04 = operation error (4th)
+0x05 = system failure, further use not possible (5th)
+
+Funct_Code 03 (0x03) to read register:
+- reading set values (5.5.2) can only be done in Set_Mode
+- reading measured values (5.5.1) can be done both in Set_Mode & Meas_Mode
+- Data Command Frame:
+|   --- Data -------  |
+| Address |Num_Element|
+|(2 bytes)| (2 bytes) |
+- List of address --> 5.5
+- Num_Element = amount of data to be read x2 (range: 0x0002 [2] ～ 0x0032 [50])
+- Only consecutive addresses can be read at once
+
+
+[P5-19]
+Funct_Code 03 (0x03) to read register:
+- Data Response Frame:
+|      ------------------------------ Data ------------------------------------        |
+|Byte_Counter|Data_1(up)|Data_1(low)|Data_2(up)|Data_2(low)|. . .|Data_n(up)|Data_n(low)|
+|  (1 byte)  |   ---------------- (Num_Element x4 bytes)  -------------------------     |
+- Bit_Counter = number of bytes of data to be read out
+- N amount of data to be read --> 2N Num_Element --> 8N bytes of data to be read
+
+
+[P5-20]
+Funct_Code 16 (0x10) to write register:
+- variable/parameter writting (5.5.2) can only be done in Set_Mode
+- Data Command Frame:
+|      ----------------------------------- Data -----------------------------------------------------        |
+| Address |Num_Element|Byte_Counter|Data_1(up)|Data_1(low)|Data_2(up)|Data_2(low)|. . .|Data_n(up)|Data_n(low)|
+|(2 bytes)| (2 bytes) |  (1 byte)  |   ---------------- (Num_Element x4 bytes)  -------------------------     |
+- List of address --> 5.5
+- Num_Element = amount of data to be read x2 (range: 0x0002 [2] - 0x0032 [50])
+- Byte_Counter = number of bytes of data to be read out
+
+
+[P5-21]
+Funct_Code 16 (0x10) to write register:
+- Data Response Frame:
+|   ------- Data ------  |
+|Byte_Counter|Num_Element|
+|  (1 byte)  | (2 bytes) |
+
+
+[P5-22]
+Funct_Code 06 (0x06) for operation command:
+- Data Command Frame:
+|   ------- Data ------      |
+| 0xFF | 0xFF |Operation_Data|
+|  (2 bytes)  |   (2 bytes)  |
+- Data Response Frame:
+|   ------- Data ------      |
+| 0xFF | 0xFF |Operation_Data|
+|  (2 bytes)  |   (2 bytes)  |
+- address is 0xFFFF
+- operation_data = [command_code + 00 in hex] (for example 0x0300 with 0x003=command_code)
+
+command_code:
+03 (0x03) = clearing of integrated energy (individual unit) 
+04 (0x04) = shift to Meas_Mode
+07 (0x07) = shift to Set_Mode
+09 (0x09) = factory/hard reset
+153 (0x99) = soft reset
+
+
+[P5-25]
+Measurement Read Address:
+Voltage 1 (V) = 0x0000 /10
+Voltage 2 (V) = 0x0002 /10
+Voltage 3 (V) = 0x0004 /10
+Current 1 (A) = 0x0006 /1000
+Current 2 (A) = 0x0008 /1000
+Current 3 (A) = 0x000A /1000
+Power Factor = 0x000C /100
+Frequency (Hz) = 0x000E /10
+Real Power (W) = 0x0010 /10
+Reactive Power (VAr) = 0x0012 /10
+Accumulated Consumed Energy (Wh) = 0x0200
+Accumulated Generated Energy (Wh) = 0x0202
+Accumulated Leading Reactive Energy (VArh) = 0x0204
+Accumulated Lagging Reactive Energy (VArh) = 0x0206
+Accumulated Total Reactive Energy (VArh) = 0x0208
+Accumulated Consumed Energy (kWh) = 0x0220
+Accumulated Generated Energy (kWh) = 0x0222
+Accumulated Leading Reactive Energy (kVArh) = 0x0224
+Accumulated Lagging Reactive Energy (kVArh) = 0x0226
+Accumulated Total Reactive Energy (kVArh) = 0x0228
+
+
+[P5-26]
+Voltage and Ampere values for different circuit configuration
+see also [P3-5]
+
+
+[P5-27]
+Parameter Read/Write Address per CT:
+Phase wire config = 0x2000
+- 0x00000000 = 1P2W
+- 0x00000001 = 1P3W
+- 0x00000002 = 3P3W
+- 0x00000003 = 1P2W2
+- 0x00000004 = 1P3W2
+CT used = 0x2004
+- 0x00000000 = 5A
+- 0x00000001 = 50A
+- 0x00000002 = 100A
+- 0x00000003 = 225A
+- 0x00000004 = 400A
+- 0x00000005 = 600A
+Unit No. = 0x2002
+- [0x00000001 (1) ～ 0x00000063 (99)]
+Simple Measurement = 0x200A
+- 0x00000000 = OFF
+- 0x00000001 = ON
+Voltage value for simple measurement = 0x200C
+- [0x00000000 (0) ～ 0x0001869F (99999)]/10
+Power factor value for simple measurement = 0x200E
+- [0x00000000 (0) ～ 0x00000064 (100)]/100
+Voltage assigment = 0x2012
+- 0x00000000 = R-N
+- 0x00000001 = T-N
+- 0x00000002 = R-T
+Accumulated Values/Measurement = [0x00000000 (0) ～ 0x3B9AC9FF (999999999)]
+- Consumed Energy (Wh) = 0x2600
+- Generated Energy (Wh) = 0x2602
+- Leading Reactive Energy (VArh) = 0x2604
+- Lagging Reactive Energy (VArh) = 0x2606
+- Total Reactive Energy (VArh) = 0x2608
+- Consumed Energy (kWh) = 0x2620
+- Generated Energy (kWh) = 0x2622
+- Leading Reactive Energy (kVArh) = 0x2624
+- Lagging Reactive Energy (kVArh) = 0x2626
+- Total Reactive Energy (kVArh) = 0x0228
+
+
+
+
+
+
+
+
