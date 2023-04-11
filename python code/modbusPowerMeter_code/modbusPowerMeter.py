@@ -5,7 +5,7 @@
 #author          :Fajar Muhammad Noor Rozaqi, Nicholas Putra Rihandoko
 #date            :2023/04/07
 #version         :1.1
-#usage           :BMS-python
+#usage           :Energy Monitoring System
 #notes           :
 #python_version  :3.7.3
 #==============================================================================
