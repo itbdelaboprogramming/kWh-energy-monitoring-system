@@ -79,11 +79,11 @@ except:
 # Checking the connection MySQL
 try:
     # Setup Raspberry Pi as Database client
-    db = pymysql.connect(host='syohin-e32-mysql.at.remote.it',      # Remote.it
-                        port=33000,                                 # Remote.it
-                        user='pi',                                  # MySQL
-                        password='raspberrypi',                     # MySQL
-                        db='test')                                  # MySQL
+    db = pymysql.connect(host='*******************',                  # Change with host name of database (Remote.it)
+                        port=********,                                # Change with port name of database (Remote.it)
+                        user='*********',                             # MySQL user
+                        password='*******',                           # MySQL password
+                        db='*********')                               # MySQL database
     cur = db.cursor()
     print("Connected to MySQl Server")
     print("")
