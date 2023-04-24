@@ -12,9 +12,9 @@ Measured value list / description
 communication protocol = Modbus
 data length = 8 bits
 stop bit = 2 bit
-baud rate = 38400bps
+baud rate = 9600bps
 parity bit = none
-Transmission waiting time = 0ms
+Transmission waiting time = 20ms
 
 
 [P5-16]
@@ -171,13 +171,15 @@ Simple Measurement = 0x200A
 - 0x00000000 = OFF
 - 0x00000001 = ON
 Voltage value for simple measurement = 0x200C
-- [0x00000000 (0) ～ 0x0001869F (99999)]/10
+- [0x00000000 (0) ～ 0x0001869F (99999)]/10 in Volt
 Power factor value for simple measurement = 0x200E
 - [0x00000000 (0) ～ 0x00000064 (100)]/100
 Voltage assigment = 0x2012
 - 0x00000000 = R-N
 - 0x00000001 = T-N
 - 0x00000002 = R-T
+Transmission Waiting Time = 0x220A
+- [0x00000000 (0) ～ 0x00000063 (99)] in ms
 Accumulated Values/Measurement = [0x00000000 (0) ～ 0x3B9AC9FF (999999999)]
 - Consumed Energy (Wh) = 0x2600
 - Generated Energy (Wh) = 0x2602
