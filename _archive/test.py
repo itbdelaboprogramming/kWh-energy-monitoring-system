@@ -1,13 +1,9 @@
-v=[[1],[1]]
-print(v)
-v[0].append(0)
-v[1].append(1)
-v[0].append(1)
-v[1].append(2)
-v[0].append(None)
-v[1].append(None)
-v[0].append(3)
-v[1].append(4)
-print(v)
-v = [[v[0][-1]],[v[1][-1]]]
-print(v)
+
+param = int(0xffffff)
+
+hex_param = hex(param)[2:].zfill(8)
+print(hex_param)
+values = [val for val in [int(hex_param[i:i+4], 16) for i in (0, 4)]]
+#values = [int(hex_param, 16)]
+
+print(values)
