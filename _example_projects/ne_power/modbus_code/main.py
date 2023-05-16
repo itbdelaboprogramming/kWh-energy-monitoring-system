@@ -38,10 +38,10 @@ timeout         = 5   # the maximum time the master/client will wait for respons
 measure_delay   = 5   # the period between each subsequent measurement (in seconds)
 
 # Define MySQL Database parameters
-mysql_host      = '******'
-mysql_db        = '******'
-mysql_user      = '******'
-mysql_password  = '******'
+mysql_host      = '****'
+mysql_db        = '****'
+mysql_user      = '****'
+mysql_password  = '****'
 update_delay    = 300   # the period between each subsequent update to database (in seconds)
 
 cpu_temp = None     # RaspberryPi temperature for hardware fault monitoring

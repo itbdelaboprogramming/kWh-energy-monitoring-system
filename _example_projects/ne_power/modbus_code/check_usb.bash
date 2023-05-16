@@ -2,7 +2,7 @@
 #title           :check_usb.bash
 #description     :Find the USb-to-RS232C Adaptor
 #author          :Nicholas Putra Rihandoko
-#date            :2023/05/08
+#date            :2023/05/12
 #version         :0.1
 #usage           :Modbus programming in Python
 #notes           :
