@@ -24,44 +24,47 @@ class node:
         self._client                    = client
         self._client_transmission_delay = delay/1000    # in seconds
         # Write commands that is available, add if needed
-        self.write_dict = {
+        self._write_dict = {
             "write_something_register":     {"fc":0x06, "address":0xFFFF, "param":0x0700},
             "write_something_registers":    {"fc":0x10, "address":0x200C, "scale":10},
             "write_something_registers2":    {"fc":0x10, "address":0x200C}}
 
     def reset_read_attr(self):
         # Reset (and/or initiate) object's attributes
-        self._V_PU                      = 0
-        self._I_PU                      = 0
-        self.Array_Voltage              = 0
-        self.Array_Current              = 0
-        self.Battery_Voltage            = 0
-        self.Battery_Current            = 0
-        self.Heatsink_Temperature       = 0
-        self.Battery_Reg_Temperature    = 0
-        self.Output_Power_W             = 0
-        self.Input_Power_W              = 0
-        self.Ah_Charge_resetable        = 0
-        self.Total_Wh_Charge_daily      = 0
+        for attr_name, attr_value in vars(self).items():
+            if not attr_name.startswith("_"):
+                setattr(self, attr_name, 0)
+
+    def handle_sign(self,register):
+        # Handle negative byte values
+        signed_values = []
+        for data in register:
+            if data >= 0x8000:
+                signed_value = -((data ^ 0xFFFF) + 1)  # Two's complement conversion
+            else:
+                signed_value = data
+            signed_values.append(signed_value)
+        return signed_values
 
     def save_read(self,response,save,num):
+        reg = self.handle_sign(response.registers)
         # Save responses to object's attributes
         if save == 1:
-            self._V_PU       = response.registers[0]+response.registers[1]/2**16        # Volts
-            self._I_PU       = response.registers[2]+response.registers[3]/2**16        # Amps
+            self._V_PU       = reg[0] + reg[1]/2**16        # Volts
+            self._I_PU       = reg[2] + reg[3]/2**16        # Amps
         if save == 2:
-            self.Battery_Voltage            = response.registers[0]*self._V_PU/2**15    # Volts
-            self.Array_Voltage              = response.registers[3]*self._V_PU/2**15    # Volts
-            self.Battery_Current            = response.registers[4]*self._I_PU/2**15    # Amps
-            self.Array_Current              = response.registers[5]*self._I_PU/2**15    # Amps
-            self.Heatsink_Temperature       = response.registers[11]                    # deg Celcius
-            self.Battery_Reg_Temperature    = response.registers[13]                    # deg Celcius
+            self.Battery_Voltage            = reg[0]*self._V_PU/2**15    # Volts
+            self.Array_Voltage              = reg[3]*self._V_PU/2**15    # Volts
+            self.Battery_Current            = reg[4]*self._I_PU/2**15    # Amps
+            self.Array_Current              = reg[5]*self._I_PU/2**15    # Amps
+            self.Heatsink_Temperature       = reg[11]                    # deg Celcius
+            self.Battery_Reg_Temperature    = reg[13]                    # deg Celcius
         if save == 3:
-            self.Ah_Charge_resetable        = response.registers[2]*0.1                             # Ah
-            self.Output_Power_W             = response.registers[8]*self._V_PU*self._I_PU/2**17     # Watt
-            self.Input_Power_W              = response.registers[9]*self._V_PU*self._I_PU/2**17     # Watt
+            self.Ah_Charge_resetable        = reg[2]*0.1                             # Ah
+            self.Output_Power_W             = reg[8]*self._V_PU*self._I_PU/2**17     # Watt
+            self.Input_Power_W              = reg[9]*self._V_PU*self._I_PU/2**17     # Watt
         if save == 4:
-            self.Total_Wh_Charge_daily      = response.registers[4]                                 # Wh
+            self.Total_Wh_Charge_daily      = reg[4]                                 # Wh
 
     def reading_sequence(self,fc,address,count,save,num=None):        
         # Send the command and read response with function_code 0x03 (3) or 0x04 (4)
@@ -112,8 +115,8 @@ class node:
             return
         
         # start writting sequence to send command with function_code 0x06 (6) or 0x10 (16)
-        if self.write_dict.get(command) is not None:
-            com = self.write_dict[command]
+        if self._write_dict.get(command) is not None:
+            com = self._write_dict[command]
             if com.get("param") is not None:
                 response = self.writting_sequence(fc=com["fc"], address=com["address"], param=com["param"])
             else:

@@ -24,56 +24,52 @@ class node:
         self._client                    = client
         self._client_transmission_delay = delay/1000    # in seconds
         # Write commands that is available, add if needed
-        self.write_dict = {
+        self._write_dict = {
             "write_something_register":     {"fc":0x06, "address":0xFFFF, "param":0x0700},
             "write_something_registers":    {"fc":0x10, "address":0x200C, "scale":10},
             "write_something_registers2":    {"fc":0x10, "address":0x200C}}
 
     def reset_read_attr(self):
         # Reset (and/or initiate) object's attributes
-        self.DC_Voltage_command         = 0
-        self.DC_Voltage_feedback        = 0
-        self.DC_Current                 = 0
-        self.AC_Voltage                 = 0
-        self.AC_Current                 = 0
-        self.DC_Power_kW                = 0
-        self.AC_Power_kW                = 0
-        self.AC_Frequency               = 0
-        self.AC_Current_ref             = 0
-        self.Power_Factor               = 0
-        self.Active_Current             = 0
-        self.Reactive_Current           = 0
-        self.DC_Voltage_SFS_Out         = 0
-        self.Consumed_Energy_GWh        = 0
-        self.Consumed_Energy_MWh        = 0
-        self.Consumed_Energy_kWh        = 0
-        self.Generated_Energy_GWh       = 0
-        self.Generated_Energy_MWh       = 0
-        self.Generated_Energy_kWh       = 0
+        for attr_name, attr_value in vars(self).items():
+            if not attr_name.startswith("_"):
+                setattr(self, attr_name, 0)
+
+    def handle_sign(self,register):
+        # Handle negative byte values
+        signed_values = []
+        for data in register:
+            if data >= 0x8000:
+                signed_value = -((data ^ 0xFFFF) + 1)  # Two's complement conversion
+            else:
+                signed_value = data
+            signed_values.append(signed_value)
+        return signed_values
 
     def save_read(self,response,save,num):
+        reg = self.handle_sign(response.registers)
         # Save responses to object's attributes
         if save == 1:
-            self.DC_Voltage_command     = response.registers[0]         # Volts
-            self.DC_Voltage_feedback    = response.registers[1]         # Volts
-            self.DC_Current             = response.registers[2]/100     # Amps
-            self.AC_Voltage             = response.registers[3]         # Volts
-            self.AC_Current             = response.registers[4]/100     # Amps
-            self.DC_Power_kW            = response.registers[5]/10      # kW
-            self.AC_Power_kW            = response.registers[6]/10      # kW
-            self.AC_Frequency           = response.registers[7]/10      # Hz
-            self.AC_Current_ref         = response.registers[8]/100     # Amps
-            self.Power_Factor           = response.registers[9]/100
-            self.Active_Current         = response.registers[10]/10     # Amps
-            self.Reactive_Current       = response.registers[11]/10     # Amps
-            self.DC_Voltage_SFS_Out     = response.registers[12]        # Volts
+            self.DC_Voltage_command     = reg[0]         # Volts
+            self.DC_Voltage_feedback    = reg[1]         # Volts
+            self.DC_Current             = reg[2]/100     # Amps
+            self.AC_Voltage             = reg[3]         # Volts
+            self.AC_Current             = reg[4]/100     # Amps
+            self.DC_Power_kW            = reg[5]/10      # kW
+            self.AC_Power_kW            = reg[6]/10      # kW
+            self.AC_Frequency           = reg[7]/10      # Hz
+            self.AC_Current_ref         = reg[8]/100     # Amps
+            self.Power_Factor           = reg[9]/100
+            self.Active_Current         = reg[10]/10     # Amps
+            self.Reactive_Current       = reg[11]/10     # Amps
+            self.DC_Voltage_SFS_Out     = reg[12]        # Volts
         elif save == 2:
-            self.Consumed_Energy_GWh        = response.registers[0]     # GWh
-            self.Consumed_Energy_MWh        = response.registers[1]     # MWh
-            self.Consumed_Energy_kWh        = response.registers[2]     # kWh
-            self.Generated_Energy_GWh       = response.registers[3]     # GWh
-            self.Generated_Energy_MWh       = response.registers[4]     # MWh
-            self.Generated_Energy_kWh       = response.registers[5]     # kWh
+            self.Consumed_Energy_GWh        = reg[0]     # GWh
+            self.Consumed_Energy_MWh        = reg[1]     # MWh
+            self.Consumed_Energy_kWh        = reg[2]     # kWh
+            self.Generated_Energy_GWh       = reg[3]     # GWh
+            self.Generated_Energy_MWh       = reg[4]     # MWh
+            self.Generated_Energy_kWh       = reg[5]     # kWh
 
     def reading_sequence(self,fc,address,count,save,num=0):        
         # Send the command and read response with function_code 0x03 (3) or 0x04 (4)
@@ -117,8 +113,8 @@ class node:
             return
         
         # start writting sequence to send command with function_code 0x06 (6) or 0x10 (16)
-        if self.write_dict.get(command) is not None:
-            com = self.write_dict[command]
+        if self._write_dict.get(command) is not None:
+            com = self._write_dict[command]
             if com.get("param") is not None:
                 response = self.writting_sequence(fc=com["fc"], address=com["address"], param=com["param"])
             else:
