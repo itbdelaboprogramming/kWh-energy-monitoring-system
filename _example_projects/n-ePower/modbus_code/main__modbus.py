@@ -17,12 +17,11 @@ import datetime # RTC Real Time Clock
 import time
 import pymysql
 import os
-import sys
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),'lib'))
-import kyuden_battery_72kWh as battery
-import yaskawa_D1000 as converter
-import yaskawa2_GA500 as inverter
-#import tristar_MPPT as charger
+
+from lib import kyuden_battery_72kWh as battery
+from lib import yaskawa_D1000 as converter
+from lib import yaskawa2_GA500 as inverter
+#from lib import tristar_MPPT as charger
 
 # Define Modbus communication parameters
 port            = '/dev/ttyAMA0'
