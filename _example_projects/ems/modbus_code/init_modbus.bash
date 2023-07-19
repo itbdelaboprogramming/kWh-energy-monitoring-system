@@ -2,7 +2,7 @@
 #title           :init_modbus.bash
 #description     :CAN Hat module installation script
 #author          :Nicholas Putra Rihandoko
-#date            :2023/06/21
+#date            :2023/07/19
 #version         :2.1
 #usage           :Modbus programming in Python
 #notes           :
@@ -25,19 +25,29 @@ sudo raspi-config nonint do_spi 0
 # Disable Serial Port to disable Serial Console, then enable Serial port without Serial Console
 sudo raspi-config nonint do_serial 1
 sudo raspi-config nonint do_serial 2
-# -*- coding:utf-8 -*-
 # Disable/comment bluetooth over serial port
 sed -i 's/^dtoverlay=pi-minuart-bt/#&/g' /boot/config.txt
+# ssh and VNC for remote access
+sudo systemctl enable ssh
+sudo systemctl start ssh
+sudo raspi-config nonint do_vnc 0
 
-# Enable execute (run program) privilege for all related files
-sudo chmod +x /home/$(logname)/modbus_code/main__modbus.py
-sudo chmod 777 /home/$(logname)/modbus_code/save/modbus_log.csv
 # Install pip for python library manager
 sudo apt update
 sudo apt install python3-pip
 # Install the necessary python library
 sudo pip3 install pymodbus
 sudo pip3 install pymysql
+# 'zerotier' for virtual LAN and remote access
+sudo apt install curl nmap -y
+curl -s https://install.zerotier.com | sudo bash
+# cron for task automation
+sudo apt install cron -y
+sudo systemctl enable cron
+
+# Enable execute (run program) privilege for all related files
+sudo chmod +x /home/$(logname)/modbus_code/main__modbus.py
+sudo chmod 777 /home/$(logname)/modbus_code/save/modbus_log.csv
 
 echo ""
 echo "=========================================================="

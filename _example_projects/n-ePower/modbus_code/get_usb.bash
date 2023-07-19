@@ -1,18 +1,19 @@
 #!/bin/bash
 #title           :get_usb.bash
-#description     :Find the USb-to-RS232C Adaptor
+#description     :Find the USB device directory
 #author          :Nicholas Putra Rihandoko
-#date            :2023/05/12
+#date            :2023/07/19
 #version         :0.1
-#usage           :Modbus programming in Python
+#usage           :programming in Python
 #notes           :
 #==============================================================================
 
 
 # Find the line with specific USB name
-line=$(ls -l /dev/serial/by-id | grep 'Prolific_Technology_Inc')
+id=$1
+line=$(ls -l /dev/serial/by-id | grep "$id")
 
-# Extract the 'ttyUSB5' part from the line
+# Extract the 'ttyUSB*' part from the line
 path=$(echo "$line" | awk '{print $NF}')
 
 # Check if the device name was found
@@ -21,5 +22,5 @@ filename=$(basename "$path")
 device_name="${filename%.*}"
 echo "/dev/$device_name"
 else
-echo ""
+echo $id
 fi
