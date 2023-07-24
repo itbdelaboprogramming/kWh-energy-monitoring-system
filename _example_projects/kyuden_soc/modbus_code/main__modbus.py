@@ -57,9 +57,9 @@ def setup_modbus():
     client.connect()
     client0.connect()
     # Define the Modbus slave/server (nodes) objects
-    bat = battery.node(unit=1, name='BATTERY', client=client0, delay=client_latency)
-    conv = converter.node(unit=2, name='CONVERTER', client=client, delay=client_latency)
-    inv = inverter.node(unit=3, name='INVERTER', client=client, delay=client_latency)
+    bat = battery.node(unit=1, name='BATTERY', client=client0, delay=client_latency, max_count=20, increment=1, shift=0)
+    conv = converter.node(unit=2, name='CONVERTER', client=client, delay=client_latency, max_count=20, increment=1, shift=0)
+    inv = inverter.node(unit=3, name='INVERTER', client=client, delay=client_latency, max_count=20, increment=1, shift=0)
     server = [bat, conv, inv]
     return server
 
