@@ -42,8 +42,6 @@ mysql_interval  = 300 # the period between each subsequent update to database (i
 
 #query.debugging()  # Monitor Modbus communication for debugging
 init = True  # variable to check Modbus initialization
-bootup_time = datetime.datetime.now()   # Used to gat the startup timestamp of the script
-timer = bootup_time
 
 def setup_modbus():
     global port, method, bytesize, stopbits, parity, baudrate, client_latency, timeout
@@ -90,11 +88,11 @@ def write_modbus(server):
             print("<===== ===== continuing ===== =====>")
             print("")
 
-def update_database(server):
-    global mysql_server, timer, bootup_time
+def update_database(server, timer):
+    global mysql_server
     # Define MySQL queries and data which will be used in the program
     cpu_temp = query.get_cpu_temperature()
-    [uptime, total_uptime, downtime, total_downtime] = query.get_updown_time(mysql_server, timer, bootup_time, mysql_timeout)
+    [bootup_time, uptime, total_uptime, downtime, total_downtime] = query.get_updown_time(mysql_server, timer, mysql_timeout)
     title = ["RPi_Temp","Volt1","Volt2",
                 "startup_date","startup_time","uptime","total_uptime",
                 "shutdown_date","shutdown_time","downtime","total_downtime"]
@@ -147,7 +145,7 @@ while not init:
             start = timer
             first[1] = False
             # Update/push data to database
-            update_database(server)
+            update_database(server, timer)
         
         time.sleep(interval)
     

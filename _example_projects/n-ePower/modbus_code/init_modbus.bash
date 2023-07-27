@@ -1,6 +1,6 @@
 #!/bin/bash
 #title           :init_modbus.bash
-#description     :CAN Hat module installation script
+#description     :CAN/RS485 Hat module installation script
 #author          :Nicholas Putra Rihandoko
 #date            :2023/07/19
 #version         :2.1

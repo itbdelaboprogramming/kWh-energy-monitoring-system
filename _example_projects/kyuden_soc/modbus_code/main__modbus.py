@@ -45,8 +45,6 @@ mysql_interval  = 300 # the period between each subsequent update to database (i
 
 #query.debugging()  # Monitor Modbus communication for debugging
 init = True  # variable to check Modbus initialization
-bootup_time = datetime.datetime.now()   # Used to gat the startup timestamp of the script
-timer = bootup_time
 
 def setup_modbus():
     global port, port0, method, bytesize, stopbits, parity, baudrate, client_latency, timeout
@@ -91,8 +89,14 @@ def write_modbus(server):
             print("<===== ===== continuing ===== =====>")
             print("")
 
-def update_database(server):
-    global mysql_server, timer, bootup_time
+def mtemp(array):
+    # Simplify a nested array into normal array (only picking the necessary values)
+    var = [array[0][0], array[2][0], array[4][0], array[6][0],
+            array[8][0], array[10][0], array[12][0], array[14][0]]
+    return var
+
+def update_database(server,timer):
+    global mysql_server
     # Define MySQL queries and data which will be used in the program
     cpu_temp = query.get_cpu_temperature()
     title = ["DateTime","RPi_Temp", "Bat_Temp", "SoC", "Bat_Volt_Total"
@@ -104,11 +108,11 @@ def update_database(server):
     mysql_query = ("INSERT INTO `{}` ({}) VALUES ({})".format(mysql_server["table"],
                                                                 ",".join(title),
                                                                 ",".join(['%s' for _ in range(len(title))])))
-    data = [timer.strftime("%Y-%m-%d %H:%M:%S"), cpu_temp, query.strval(query.mtemp(server[0].Module_Temperature)), server[0].SOC, server[0].Total_Voltage,
-                query.strval(server[0].Cell_Voltage_M1), query.strval(server[0].Cell_Voltage_M2), query.strval(server[0].Cell_Voltage_M3), query.strval(server[0].Cell_Voltage_M4),
-                query.strval(server[0].Cell_Voltage_M5), query.strval(server[0].Cell_Voltage_M6), query.strval(server[0].Cell_Voltage_M7), query.strval(server[0].Cell_Voltage_M8),
-                query.strval(server[0].Cell_Voltage_M9), query.strval(server[0].Cell_Voltage_M10), query.strval(server[0].Cell_Voltage_M11), query.strval(server[0].Cell_Voltage_M12),
-                query.strval(server[0].Cell_Voltage_M13), query.strval(server[0].Cell_Voltage_M14), query.strval(server[0].Cell_Voltage_M15), query.strval(server[0].Cell_Voltage_M16),
+    data = [timer.strftime("%Y-%m-%d %H:%M:%S"), cpu_temp, mtemp(server[0].Module_Temperature), server[0].SOC, server[0].Total_Voltage,
+                server[0].Cell_Voltage_M1, server[0].Cell_Voltage_M2, server[0].Cell_Voltage_M3, server[0].Cell_Voltage_M4,
+                server[0].Cell_Voltage_M5, server[0].Cell_Voltage_M6, server[0].Cell_Voltage_M7, server[0].Cell_Voltage_M8,
+                server[0].Cell_Voltage_M9, server[0].Cell_Voltage_M10, server[0].Cell_Voltage_M11, server[0].Cell_Voltage_M12,
+                server[0].Cell_Voltage_M13, server[0].Cell_Voltage_M14, server[0].Cell_Voltage_M15, server[0].Cell_Voltage_M16,
                 server[1].DC_Current, server[2].DC_Current, server[2].AC_Power]
     filename = 'modbus_log.csv'
 
@@ -154,7 +158,7 @@ while not init:
             start = timer
             first[1] = False
             # Update/push data to database
-            update_database(server)
+            update_database(server, timer)
         
         time.sleep(interval)
     

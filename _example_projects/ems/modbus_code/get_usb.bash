@@ -10,7 +10,7 @@
 
 
 # Find the line with specific USB name
-id='Prolific_Technology_Inc'
+id=$1
 line=$(ls -l /dev/serial/by-id | grep "$id")
 
 # Extract the 'ttyUSB*' part from the line
@@ -20,7 +20,9 @@ path=$(echo "$line" | awk '{print $NF}')
 if [ -n "$path" ]; then
 filename=$(basename "$path")
 device_name="${filename%.*}"
+sudo chmod a+rw /dev/$device_name
 echo "/dev/$device_name"
 else
-echo ""
+sudo chmod a+rw $id
+echo $id
 fi

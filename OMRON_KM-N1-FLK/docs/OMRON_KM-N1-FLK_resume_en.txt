@@ -73,7 +73,7 @@ Funct_Code 03 (0x03) to read register:
 [P5-19]
 Funct_Code 03 (0x03) to read register:
 - Data Response Frame:
-|      ------------------------------ Data ------------------------------------        |
+|       ------------------------------ Data ------------------------------------        |
 |Byte_Counter|Data_1(up)|Data_1(low)|Data_2(up)|Data_2(low)|. . .|Data_n(up)|Data_n(low)|
 |  (1 byte)  |   ---------------- (Num_Element x4 bytes)  -------------------------     |
 - Bit_Counter = number of bytes of data to be read out
@@ -84,7 +84,7 @@ Funct_Code 03 (0x03) to read register:
 Funct_Code 16 (0x10) to write register:
 - variable/parameter writting (5.5.2) can only be done in Set_Mode
 - Data Command Frame:
-|      ----------------------------------- Data -----------------------------------------------------        |
+|       ----------------------------------- Data -----------------------------------------------------        |
 | Address |Num_Element|Byte_Counter|Data_1(up)|Data_1(low)|Data_2(up)|Data_2(low)|. . .|Data_n(up)|Data_n(low)|
 |(2 bytes)| (2 bytes) |  (1 byte)  |   ---------------- (Num_Element x4 bytes)  -------------------------     |
 - List of address --> 5.5

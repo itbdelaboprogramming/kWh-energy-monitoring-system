@@ -30,14 +30,12 @@ class node:
         self._inc                       = increment     # address increment
         # Commands and memory address that are available/configured, add if needed
         self._memory_dict = {
-            ## EXAMPLE READ FORMAT
-            ##"Temperature_M10_1":        {"fc":0x04, "address":0x119D, "scale":1, "bias":55, "round":0},
-            # read scaling values
+            ## read scaling values
             "V_PU_hi":             {"fc":0x03, "address":0x0000, "scale":1, "bias":0, "round":0},
             "V_PU_lo":             {"fc":0x03, "address":0x0001, "scale":1/(2**16), "bias":0, "round":5},
             "I_PU_hi":             {"fc":0x03, "address":0x0002, "scale":1, "bias":0, "round":0},
             "I_PU_lo":             {"fc":0x03, "address":0x0003, "scale":1/(2**16), "bias":0, "round":5},
-            # read
+            ## read
             "Battery_Voltage":      {"fc":0x03, "address":0x0018, "scale":1, "bias":0, "round":0},
             "Array_Voltage":        {"fc":0x03, "address":0x001B, "scale":1, "bias":0, "round":0},
             "Battery_Current":      {"fc":0x03, "address":0x001C, "scale":1, "bias":0, "round":0},
@@ -47,19 +45,12 @@ class node:
             "Output_Power":         {"fc":0x03, "address":0x003A, "scale":1, "bias":0, "round":0}, # Watt
             "Input_Power":          {"fc":0x03, "address":0x003B, "scale":1, "bias":0, "round":0}, # Watt
             "Total_Wh_Charge_Daily":{"fc":0x03, "address":0x0044, "scale":1, "bias":0, "round":0}
-            
-            ## EXAMPLE WRITE FORMAT
-            ##"shift_to_Setting":                 {"fc":0x06, "address":0xFFFF, "scale":1, "param":0x0700},
             }
         # Used to shift the Modbus memory address for some devices
         for key in self._memory_dict:
             self._memory_dict[key]["address"] += shift
         # Extra calculation for parameters/data that is not readily available from Modbus, add if needed
         self._extra_calc = {
-            ## EXAMPLE CALCULATION FORMAT
-            ##"_V_PU":            {"scale":1, "bias":0, "round":5, "limit":[], "scale_dep":[[1,"_V_PU_hi"]], "bias_dep":[[1,"_V_PU_lo"]]},
-            ##"DC_Current":       {"scale":0.91*(3**(0.5))*1.835, "bias":-9, "round":1, "limit":[0.2,0], "scale_dep":[[1,"Output_Current"],[1,"Output_Voltage"],[-1,"DC_Bus_Voltage"]], "bias_dep":[]} # Amps
-            
             "V_PU":                 {"scale":1, "bias":0, "round":5, "limit":[], "scale_dep":[[1,"V_PU_hi"]], "bias_dep":[[1,"V_PU_lo"]]},
             "I_PU":                 {"scale":1, "bias":0, "round":5, "limit":[], "scale_dep":[[1,"I_PU_hi"]], "bias_dep":[[1,"I_PU_lo"]]},
             "Battery_Voltage":      {"scale":1/(2**15), "bias":0, "round":2, "limit":[], "scale_dep":[[1,"Battery_Voltage"],[1,"V_PU"]], "bias_dep":[]},
@@ -68,9 +59,6 @@ class node:
             "Array_Current":        {"scale":1/(2**15), "bias":0, "round":2, "limit":[], "scale_dep":[[1,"Array_Current"],[1,"I_PU"]], "bias_dep":[]},
             "Output_Power":         {"scale":1/(2**17), "bias":0, "round":2, "limit":[], "scale_dep":[[1,"Output_Power"],[1,"V_PU"],[1,"I_PU"]], "bias_dep":[]},
             "Input_Power":          {"scale":1/(2**17), "bias":0, "round":2, "limit":[], "scale_dep":[[1,"Input_Power"],[1,"V_PU"],[1,"I_PU"]], "bias_dep":[]}
-            
-            ## EXAMPLE COMPILE FORMAT
-            ##"Phase_3_VI":       {"compile":[["Voltage_1","Voltage_2","Voltage_3"],["Current_1","Current_2","Current_3"]]}
             }
 
 
@@ -160,14 +148,13 @@ class node:
                 except AttributeError: pass
 
     def save_read(self,response,save):
-        regist = self.handle_sign(response.registers)
         # Save responses to object's attributes
         s = 0
-        for i, reg in enumerate(regist):
+        for i, reg in enumerate(response):
             if s <= len(save)-1:
-                if save[0].startswith("0"): start_save = int(save[0],16)
+                if save[0].startswith('Hx'): start_save = int(save[0],16)
                 else: start_save = self._memory_dict[save[0]]["address"]
-                if save[s].startswith("0"):
+                if save[s].startswith('Hx'):
                     if int(save[s],16) == start_save+i:
                         setattr(self, save[s], reg)
                         s=s+1
@@ -200,7 +187,7 @@ class node:
                 print(" -- unrecognized address for '{}' --".format(a))
             else:
                 address.append(a)
-                save.append('0x'+hex(a)[2:].zfill(4).upper())
+                save.append('Hx'+hex(a)[2:].zfill(4).upper())
                 print(" -- address '{}' may gives raw data, use with discretion --".format(save[-1]))
 
 
@@ -233,29 +220,36 @@ class node:
         if fc == 0x03:
             for i, a in enumerate(addr):
                 response = self._client.read_holding_registers(address=a[0], count=a[-1]-a[0]+self._inc, unit=self._unit)
-                self.save_read(response,save[i])
+                self.save_read(self.handle_sign(response.registers),save[i])
                 time.sleep(self._client_transmission_delay)
         elif fc == 0x04:
             for i, a in enumerate(addr):
                 response = self._client.read_input_registers(address=a[0], count=a[-1]-a[0]+self._inc, unit=self._unit)
-                self.save_read(response,save[i])
+                self.save_read(self.handle_sign(response.registers),save[i])
                 time.sleep(self._client_transmission_delay)
         else:
             print(" -- function code needs to be declared for this list of read address --")
         self.handle_extra_calculation()
         return response
 
+    def handle_multiple_writting(self,param):
+        # convert parameter input into hexadecimal format based on address increment
+        if param < 0: hex_param = hex((abs(param) ^ ((1 << (16*self._inc)) - 1)) + 1)[2:].zfill(4*self._inc)
+        else: hex_param = hex(param)[2:].zfill(4*self._inc)
+        values = [int(hex_param[i:i+4], 16) for i in range(0, 4*self._inc, 4)]
+        return values
+
     def writting_sequence(self,fc,address,param):
         response = None
+        if isinstance(param, list):
+            params = []
+            for p in param: params.extend(self.handle_multiple_writting(p))
+        else: params = self.handle_multiple_writting(param)
         # Send the command with function_code 0x06 (6) or 0x10 (16)
         if fc == 0x06:
             response = self._client.write_register(address=address, value=param, unit=self._unit)
         elif fc == 0x10:
-            # convert parameter input into hexadecimal format based on address increment
-            if param < 0: hex_param = hex((abs(param) ^ ((1 << (16*self._inc)) - 1)) + 1)[2:].zfill(4*self._inc)
-            else: hex_param = hex(param)[2:].zfill(4*self._inc)
-            values = [int(hex_param[i:i+4], 16) for i in range(0, 4*self._inc, 4)]
-            response = self._client.write_registers(address=address, values=values, unit=self._unit)
+            response = self._client.write_registers(address=address, values=params, unit=self._unit)
         time.sleep(self._client_transmission_delay)
         return response
 

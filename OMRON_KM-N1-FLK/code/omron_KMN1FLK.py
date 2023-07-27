@@ -30,8 +30,7 @@ class node:
         self._inc                       = increment     # address increment
         # Commands and memory address that are available/configured, add if needed
         self._memory_dict = {
-            ## EXAMPLE READ FORMAT
-            ##"Temperature_M10_1":        {"fc":0x04, "address":0x119D, "scale":1, "bias":55, "round":0},
+            ## read
             "Voltage_1":                        {"fc":0x03, "address":0x0000, "scale":1/10, "bias":0, "round":1}, # Volts
             "Voltage_2":                        {"fc":0x03, "address":0x0002, "scale":1/10, "bias":0, "round":1}, # Volts
             "Voltage_3":                        {"fc":0x03, "address":0x0004, "scale":1/10, "bias":0, "round":1}, # Volts
@@ -52,9 +51,7 @@ class node:
             "Lead_Reactive_Energy_kVArh":       {"fc":0x03, "address":0x0224, "scale":1, "bias":0, "round":0},
             "Lag_Reactive_Energy_kVArh":        {"fc":0x03, "address":0x0226, "scale":1, "bias":0, "round":0},
             "Total_Reactive_Energy_kVArh":      {"fc":0x03, "address":0x0228, "scale":1, "bias":0, "round":0},
-            
-            ## EXAMPLE WRITE FORMAT
-            ##"shift_to_Setting":                 {"fc":0x06, "address":0xFFFF, "scale":1, "param":0x0700},
+            ## write
             "shift_to_Setting":                 {"fc":0x06, "address":0xFFFF, "scale":1, "param":0x0700}, #0x0700 to setting, 0x0400 to measurement
             "shift_to_measurement":             {"fc":0x06, "address":0xFFFF, "scale":1, "param":0x0400}, #0x0700 to setting, 0x0400 to measurement
             "set_Phase_Wire_Config":            {"fc":0x10, "address":0x2000, "scale":1},
@@ -80,12 +77,7 @@ class node:
             self._memory_dict[key]["address"] += shift
         # Extra calculation for parameters/data that is not readily available from Modbus, add if needed
         self._extra_calc = {
-            ## EXAMPLE CALCULATION FORMAT
-            ##"_V_PU":            {"scale":1, "bias":0, "round":5, "limit":[], "scale_dep":[[1,"_V_PU_hi"]], "bias_dep":[[1,"_V_PU_lo"]]},
-            ##"DC_Current":       {"scale":0.91*(3**(0.5))*1.835, "bias":-9, "round":1, "limit":[0.2,0], "scale_dep":[[1,"Output_Current"],[1,"Output_Voltage"],[-1,"DC_Bus_Voltage"]], "bias_dep":[]} # Amps
-            
-            ## EXAMPLE COMPILE FORMAT
-            ##"Phase_3_VI":       {"compile":[["Voltage_1","Voltage_2","Voltage_3"],["Current_1","Current_2","Current_3"]]}
+
             }
 
     def reset_read_attr(self):
@@ -174,14 +166,13 @@ class node:
                 except AttributeError: pass
 
     def save_read(self,response,save):
-        regist = self.handle_sign(response.registers)
         # Save responses to object's attributes
         s = 0
-        for i, reg in enumerate(regist):
+        for i, reg in enumerate(response):
             if s <= len(save)-1:
-                if save[0].startswith("0"): start_save = int(save[0],16)
+                if save[0].startswith('Hx'): start_save = int(save[0],16)
                 else: start_save = self._memory_dict[save[0]]["address"]
-                if save[s].startswith("0"):
+                if save[s].startswith('Hx'):
                     if int(save[s],16) == start_save+i:
                         setattr(self, save[s], reg)
                         s=s+1
@@ -214,7 +205,7 @@ class node:
                 print(" -- unrecognized address for '{}' --".format(a))
             else:
                 address.append(a)
-                save.append('0x'+hex(a)[2:].zfill(4).upper())
+                save.append('Hx'+hex(a)[2:].zfill(4).upper())
                 print(" -- address '{}' may gives raw data, use with discretion --".format(save[-1]))
 
 
@@ -247,29 +238,36 @@ class node:
         if fc == 0x03:
             for i, a in enumerate(addr):
                 response = self._client.read_holding_registers(address=a[0], count=a[-1]-a[0]+self._inc, unit=self._unit)
-                self.save_read(response,save[i])
+                self.save_read(self.handle_sign(response.registers),save[i])
                 time.sleep(self._client_transmission_delay)
         elif fc == 0x04:
             for i, a in enumerate(addr):
                 response = self._client.read_input_registers(address=a[0], count=a[-1]-a[0]+self._inc, unit=self._unit)
-                self.save_read(response,save[i])
+                self.save_read(self.handle_sign(response.registers),save[i])
                 time.sleep(self._client_transmission_delay)
         else:
             print(" -- function code needs to be declared for this list of read address --")
         self.handle_extra_calculation()
         return response
 
+    def handle_multiple_writting(self,param):
+        # convert parameter input into hexadecimal format based on address increment
+        if param < 0: hex_param = hex((abs(param) ^ ((1 << (16*self._inc)) - 1)) + 1)[2:].zfill(4*self._inc)
+        else: hex_param = hex(param)[2:].zfill(4*self._inc)
+        values = [int(hex_param[i:i+4], 16) for i in range(0, 4*self._inc, 4)]
+        return values
+
     def writting_sequence(self,fc,address,param):
         response = None
+        if isinstance(param, list):
+            params = []
+            for p in param: params.extend(self.handle_multiple_writting(p))
+        else: params = self.handle_multiple_writting(param)
         # Send the command with function_code 0x06 (6) or 0x10 (16)
         if fc == 0x06:
             response = self._client.write_register(address=address, value=param, unit=self._unit)
         elif fc == 0x10:
-            # convert parameter input into hexadecimal format based on address increment
-            if param < 0: hex_param = hex((abs(param) ^ ((1 << (16*self._inc)) - 1)) + 1)[2:].zfill(4*self._inc)
-            else: hex_param = hex(param)[2:].zfill(4*self._inc)
-            values = [int(hex_param[i:i+4], 16) for i in range(0, 4*self._inc, 4)]
-            response = self._client.write_registers(address=address, values=values, unit=self._unit)
+            response = self._client.write_registers(address=address, values=params, unit=self._unit)
         time.sleep(self._client_transmission_delay)
         return response
 
