@@ -57,18 +57,14 @@ class node:
             "Reset_All_Values":                 {"fc":0x06, "address":5328, "scale":1, "param":0x0001}
             }
         # Used to shift the Modbus memory address for some devices
-        for key in self._memory_dict:
-            self._memory_dict[key]["address"] += shift
+        for key in self._memory_dict: self._memory_dict[key]["address"] += shift
         # Extra calculation for parameters/data that is not readily available from Modbus, add if needed
-        self._extra_calc = {
-
-            }
+        self._extra_calc = {}
 
     def reset_read_attr(self):
         # Reset (and/or initiate) object's attributes
         for attr_name, attr_value in vars(self).items():
-            if not attr_name.startswith("_"):
-                setattr(self, attr_name, 0)
+            if not attr_name.startswith("_"): setattr(self, attr_name, 0)
 
     def map_read_attr(self,raw_address):
         # get the attribute data using its Modbus memory address
@@ -76,8 +72,7 @@ class node:
         for key, value in self._memory_dict.items():
             for a in sorted(raw_address):
                 if value["address"] == a:
-                    try:
-                        mapped_addr.append(getattr(self, key))
+                    try: mapped_addr.append(getattr(self, key))
                     except:
                         mapped_addr.append(None)
                         print(" -- one or more mapped address has not been read from server --")
@@ -92,8 +87,7 @@ class node:
                     data = (data << 16) | register[i+b]
                 if data >= (0x8000 << (16*(self._inc-1))):
                     signed_value = -int((data ^ ((1 << (16*self._inc)) - 1)) + 1)
-                else:
-                    signed_value = int(data)
+                else: signed_value = int(data)
                 signed_values.append(signed_value)
             else: signed_values.append(None)
         return signed_values
@@ -104,8 +98,7 @@ class node:
         if isinstance(array, list):
             dim.append(len(array))
             inner_dim = self.get_compile_dimension(array[0])
-            if inner_dim:
-                dim.extend(inner_dim)
+            if inner_dim: dim.extend(inner_dim)
         return dim
     
     def create_copy_of_compile(self,size):
@@ -130,7 +123,7 @@ class node:
                 # Make a same size array, copy the the dependency to the new array, assign it to new attribute
                 dim = self.get_compile_dimension(value["compile"])
                 comp = self.create_copy_of_compile(dim)
-                self.copy_value_to_compile(value["compile"],comp)
+                self.copy_value_to_compile(value["compile"], comp)
                 setattr(self, key, comp)
             else:
                 val = 1
@@ -144,8 +137,7 @@ class node:
                         val += getattr(self, bias[0])*getattr(self, bias[1])
                     val = round(val * value["scale"] + value["bias"], value["round"])
                     if value["limit"]:
-                        if val < value["limit"][0]:
-                            val = value["limit"][1]
+                        if val < value["limit"][0]: val = value["limit"][1]
                     setattr(self, key, val)
                 except AttributeError: pass
 
@@ -158,66 +150,50 @@ class node:
                 else: start_save = self._memory_dict[save[0]]["address"]
                 if save[s].startswith('Hx'):
                     if int(save[s],16) == start_save+i:
-                        setattr(self, save[s], reg)
-                        s=s+1
+                        setattr(self, save[s], reg); s=s+1
                 else:
                     if self._memory_dict[save[s]]["address"] == start_save+i:
                         val = round(reg * self._memory_dict[save[s]]["scale"] + self._memory_dict[save[s]]["bias"], self._memory_dict[save[s]]["round"])
-                        setattr(self, save[s], val)
-                        s=s+1
+                        setattr(self, save[s], val); s=s+1
 
     def count_address(self,fc,raw_address):
         # Configure the read address (final_addr) and the attribute name where the read value is saved (final_save)
-        address = []
-        temp_addr = []
-        final_addr = []
-        save = []
-        temp_save = []
-        final_save = []
+        address, temp_addr, final_addr, save, temp_save, final_save = [], [], [], [], [], []
 
         # Match the address with the information in self._memory_dict library
         for key, value in self._memory_dict.items():
             if value["address"] in raw_address or key.lower() in raw_address:
-                address.append(value["address"])
-                save.append(key)
+                address.append(value["address"]); save.append(key)
                 if fc == None: fc = value["fc"]
                 raw_address = [x for x in raw_address if (x != value["address"] and x != key.lower())]
+                if not raw_address: break
 
         # If the address is not available in the library, then use it as is
         for a in raw_address:
             if isinstance(a,str):
                 print(" -- unrecognized address for '{}' --".format(a))
             else:
-                address.append(a)
-                save.append('Hx'+hex(a)[2:].zfill(4).upper())
+                address.append(a); save.append('Hx'+hex(a)[2:].zfill(4).upper())
                 print(" -- address '{}' may gives raw data, use with discretion --".format(save[-1]))
-
 
         # Divide the address to be read into several command based on max_count
         address, save = zip(*sorted(zip(address, save)))
+        address, save = list(address), list(save)
         for i, a in enumerate(address):
             if not temp_addr:
-                temp_addr.append(a)
-                temp_save.append(save[i])
+                temp_addr.append(a); temp_save.append(save[i])
             else:
                 if a - temp_addr[0] + 1 <= self._max_count:
-                    temp_addr.append(a)
-                    temp_save.append(save[i])
+                    temp_addr.append(a); temp_save.append(save[i])
                 else:
-                    final_addr.append(temp_addr)
-                    final_save.append(temp_save)
-                    temp_addr = [a]
-                    temp_save = [save[i]]
-        if temp_addr:
-            final_addr.append(temp_addr)
-            final_save.append(temp_save)
-            temp_addr = []
-            temp_save = []
-        return [fc, final_addr, final_save]
+                    final_addr.append(temp_addr); final_save.append(temp_save)
+                    temp_addr, temp_save = [a], [save[i]]
+        if temp_addr: final_addr.append(temp_addr); final_save.append(temp_save)
+        return fc, final_addr, final_save
 
     def reading_sequence(self,fc,address):
         response = None
-        [fc, addr, save] = self.count_address(fc,address)            
+        fc, addr, save = self.count_address(fc,address)            
         # Send the command and read response with function_code 0x03 (3) or 0x04 (4)
         if fc == 0x03:
             for i, a in enumerate(addr):
@@ -229,8 +205,7 @@ class node:
                 response = self._client.read_input_registers(address=a[0], count=a[-1]-a[0]+self._inc, unit=self._unit)
                 self.save_read(self.handle_sign(response.registers),save[i])
                 time.sleep(self._client_transmission_delay)
-        else:
-            print(" -- function code needs to be declared for this list of read address --")
+        else: print(" -- function code needs to be declared for this list of read address --")
         self.handle_extra_calculation()
         return response
 
@@ -267,8 +242,7 @@ class node:
                         result.append(d[1].lower())
                     for d in self._extra_calc.get(item)["bias_dep"]:
                         result.append(d[1].lower())
-                else:
-                    result.append(item.lower())
+                else: result.append(item.lower())
         return result
 
     def send_command(self,command,address,param=None,fc=None):
@@ -280,14 +254,12 @@ class node:
                 if key.lower() in address:
                     try: extra = self.handle_dependency(self._extra_calc[key]["compile"])
                     except KeyError: extra = self.handle_dependency([key])
-                    address.extend(extra)
-                    address.remove(key.lower())
-            response = self.reading_sequence(fc=fc,address=address)
+                    address.extend(extra); address.remove(key.lower())
+            response = self.reading_sequence(fc, address)
 
         # start writting sequence to send command with function_code 0x06 (6) or 0x10 (16)
         elif command == "write":
-            if not isinstance(address,str):
-                address += self._shift
+            if not isinstance(address,str): address += self._shift
             for key, value in self._memory_dict.items():
                 if value["address"] == address or key.lower() == str(address).lower():
                     address = value["address"]
@@ -297,18 +269,16 @@ class node:
                         if self._memory_dict[key].get("param") is not None:
                             param = value["param"]
                         else:
-                            print(" -- no parameter to be written, command was not completed --")
-                            print("")
-                            return
+                            print(" -- no parameter to be written --"); return
                     else:
-                        param = param*value["scale"]
+                        if self._memory_dict[key].get("scale") is not None:
+                            param = param*value["scale"]
                     break
             
             if (fc == None) or (param == None) or isinstance(address,str):
-                print(" -- this write commmand has not been configured in this library yet -- ")
+                print(" -- incomplete input argument -- ")
             else:
-                response = self.writting_sequence(fc=fc, address=address, param=param)
-                print("{} ({}) get: {}".format(key,str(hex(address)),response))        
-        else:
-            print("-- unrecognized command --")
-            return
+                response = self.writting_sequence(fc, address, param)
+                print("{} ({}) get: {}".format(key, str(hex(address)), response))
+
+        else: print("-- unrecognized command --")
