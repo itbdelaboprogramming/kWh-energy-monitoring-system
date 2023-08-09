@@ -58,12 +58,11 @@ class node:
         # get the attribute data using its Modbus memory address
         mapped_addr = []
         for key, value in self._memory_dict.items():
-            for a in sorted(raw_address):
+            for a in raw_address:
                 if value["address"] == a:
-                    try: mapped_addr.append(getattr(self, key))
-                    except:
-                        mapped_addr.append(None)
-                        print(" -- one or more mapped address has not been read from server --")
+                    try: mapped_addr.append([key, getattr(self, key)])
+                    except: print(" -- one or more mapped address has not been read from server --")
+                    break
         return mapped_addr
 
     def handle_sign(self,register):
